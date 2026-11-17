@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="くじカウンター">
+<meta name="theme-color" content="#05070c">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<title>くじカウンター</title>
+<style>
+  :root{
+    --bg:#05070c;
+    --panel:#0b0f18;
+    --cyan:#5ff3ff;
+    --cyan-dim:#2a8f9c;
+    --pink:#ff5fd2;
+    --violet:#b98cff;
+    --text:#eaf6ff;
+    --muted:#7d8a99;
+    --red:#ff5f7a;
+    --gap:clamp(8px,1.6vmin,16px);
+    --radius:clamp(10px,2vmin,18px);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",sans-serif;
+    overscroll-behavior:none;-webkit-user-select:none;user-select:none;touch-action:manipulation;}
+  body{overflow:hidden;}
+  .app{
+    position:fixed;inset:0;
+    padding:calc(var(--gap) + env(safe-area-inset-top)) calc(var(--gap) + env(safe-area-inset-right))
+            calc(var(--gap) + env(safe-area-inset-bottom)) calc(var(--gap) + env(safe-area-inset-left));
+    display:grid;gap:var(--gap);
+    grid-template-columns:1fr 1.25fr;
+    grid-template-rows:1fr auto;
+    grid-template-areas:"count right" "count right";
+  }
+  .panel{
+    background:var(--panel);
+    border:2px solid var(--cyan);
+    border-radius:var(--radius);
+    box-shadow:0 0 6px rgba(95,243,255,.55),0 0 18px rgba(95,243,255,.25),inset 0 0 12px rgba(95,243,255,.12);
+    position:relative;
+  }
+  /* ---- 左：残数 ---- */
+  .count{grid-area:count;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--gap);}
+  .label{font-weight:800;letter-spacing:.06em;font-size:clamp(11px,2.6vmin,20px);color:var(--text);}
+  .num{font-weight:900;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  .prize{
+    font-size:clamp(48px,21vmin,200px);
+    background:linear-gradient(180deg,#ffb3ec 0%,var(--pink) 45%,var(--violet) 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 0 10px rgba(255,95,210,.55));
+    margin-top:.12em;
+  }
+  .bar{width:68%;height:clamp(3px,.7vmin,6px);border-radius:3px;background:var(--text);margin:clamp(6px,2vmin,18px) 0;
+    box-shadow:0 0 8px rgba(234,246,255,.6);}
+  .total{font-size:clamp(48px,21vmin,200px);color:#d6f2ff;text-shadow:0 0 12px rgba(95,243,255,.45);}
+  .settings-btn{position:absolute;left:var(--gap);bottom:calc(var(--gap) * .8);background:none;border:none;color:var(--muted);
+    font:inherit;font-weight:700;font-size:clamp(10px,2.1vmin,15px);padding:6px;cursor:pointer;}
+  /* ---- 右側 ---- */
+  .right{grid-area:right;display:grid;gap:var(--gap);grid-template-rows:1fr auto;min-height:0;}
+  .pct{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--gap);}
+  .pct-num{font-size:clamp(40px,15vmin,150px);color:#f2fbff;text-shadow:0 0 14px rgba(95,243,255,.5);margin:.08em 0 .1em;}
+  .pct-num small{font-size:.62em;margin-left:.04em;}
+  .streak{font-weight:800;font-size:clamp(12px,3vmin,24px);}
+  .streak b{font-variant-numeric:tabular-nums;font-size:1.35em;margin:0 .15em;}
+  .streak.hot b{color:var(--red);text-shadow:0 0 10px rgba(255,95,122,.7);}
+  .btns{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap);}
+  .btn{
+    font:inherit;font-weight:800;color:var(--text);
+    font-size:clamp(13px,3.2vmin,26px);
+    min-height:clamp(44px,13vmin,110px);
+    background:var(--panel);
+    border:2px solid var(--cyan);border-radius:calc(var(--radius) * .8);
+    box-shadow:0 0 6px rgba(95,243,255,.45),inset 0 0 10px rgba(95,243,255,.1);
+    cursor:pointer;transition:transform .06s,filter .06s;
+    display:flex;align-items:center;justify-content:center;gap:.4em;
+  }
+  .btn:active{transform:scale(.97);filter:brightness(1.4);}
+  .btn.hit{border-color:var(--pink);box-shadow:0 0 8px rgba(255,95,210,.7),inset 0 0 14px rgba(255,95,210,.25);
+    background:linear-gradient(180deg,rgba(255,95,210,.16),rgba(185,140,255,.08));}
+  .btn.ghost{border-color:var(--cyan-dim);box-shadow:none;color:var(--muted);}
+  .btn:disabled{opacity:.35;pointer-events:none;}
+  .note{grid-column:1 / -1;text-align:right;color:var(--muted);font-weight:600;font-size:clamp(9px,1.8vmin,13px);}
+
+  .flash{animation:flash .35s ease-out;}
+  @keyframes flash{0%{filter:brightness(2.2) drop-shadow(0 0 22px rgba(255,95,210,.9));}100%{}}
+
+  /* 縦向き */
+  @media (orientation:portrait){
+    .app{grid-template-columns:1fr;grid-template-rows:1.1fr 1fr;grid-template-areas:"count" "right";}
+    .prize,.total{font-size:clamp(48px,15vh,180px);}
+    .pct-num{font-size:clamp(40px,9vh,120px);}
+    .btn{min-height:clamp(52px,8vh,100px);font-size:clamp(15px,2.4vh,26px);}
+    .label{font-size:clamp(13px,2vh,22px);}
+    .streak{font-size:clamp(14px,2.2vh,24px);}
+  }
+
+  /* ---- モーダル ---- */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:16px;z-index:10;}
+  .modal.open{display:flex;}
+  .sheet{width:min(440px,100%);max-height:100%;overflow:auto;padding:20px;}
+  .sheet h2{margin:0 0 14px;font-size:18px;letter-spacing:.04em;}
+  .sheet p{margin:0 0 16px;color:var(--muted);font-size:14px;line-height:1.6;}
+  .field{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;}
+  .field span{font-weight:700;font-size:15px;}
+  .stepper{display:flex;align-items:center;gap:6px;}
+  .stepper button{width:40px;height:40px;border-radius:10px;border:2px solid var(--cyan-dim);background:var(--panel);color:var(--text);
+    font-size:20px;font-weight:800;cursor:pointer;}
+  .stepper input{width:90px;height:40px;text-align:center;border-radius:10px;border:2px solid var(--cyan);background:#000;color:var(--text);
+    font:inherit;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;-webkit-user-select:text;user-select:text;}
+  .err{color:var(--red);font-size:13px;min-height:1.2em;margin:4px 0 10px;}
+  .row{display:flex;gap:10px;}
+  .row .btn{flex:1;min-height:48px;font-size:16px;}
+  .btn.danger{border-color:var(--red);box-shadow:0 0 8px rgba(255,95,122,.5);}
+</style>
+</head>
+<body>
+<div class="app">
+  <section class="panel count">
+    <div class="label">豪華景品残数 / 総残り</div>
+    <div class="num prize" id="prize">0</div>
+    <div class="bar"></div>
+    <div class="num total" id="total">0</div>
+    <button class="settings-btn" id="openSettings">▶ 設定を変更</button>
+  </section>
+
+  <div class="right">
+    <section class="panel pct">
+      <div class="label">パーセンテージ</div>
+      <div class="num pct-num" id="pct">0.0<small>%</small></div>
+      <div class="streak" id="streakBox">NC連続<b id="streak">0</b>回</div>
+    </section>
+    <div class="btns">
+      <button class="btn hit" id="btnHit">○ 豪華景品</button>
+      <button class="btn" id="btnNc">× NC</button>
+      <button class="btn ghost" id="btnUndo">↶ 1つ戻す</button>
+      <button class="btn" id="btnReset">↻ リセット</button>
+      <div class="note">豪華景品＝両方−1 ／ NC＝総残りだけ−1</div>
+    </div>
+  </div>
+</div>
+
+<!-- 設定 -->
+<div class="modal" id="settingsModal">
+  <div class="panel sheet">
+    <h2>設定を変更</h2>
+    <p>開始時の数を入れてください。保存すると今の残数がこの数に置き換わります。</p>
+    <div class="field"><span>豪華景品の数</span>
+      <div class="stepper"><button data-t="inPrize" data-d="-1">−</button><input id="inPrize" type="number" inputmode="numeric" min="0"><button data-t="inPrize" data-d="1">＋</button></div>
+    </div>
+    <div class="field"><span>くじの総数</span>
+      <div class="stepper"><button data-t="inTotal" data-d="-1">−</button><input id="inTotal" type="number" inputmode="numeric" min="1"><button data-t="inTotal" data-d="1">＋</button></div>
+    </div>
+    <div class="err" id="err"></div>
+    <div class="row">
+      <button class="btn ghost" id="cancelSettings">やめる</button>
+      <button class="btn hit" id="saveSettings">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- リセット確認 -->
+<div class="modal" id="resetModal">
+  <div class="panel sheet">
+    <h2>リセットしますか？</h2>
+    <p id="resetText"></p>
+    <div class="row">
+      <button class="btn ghost" id="cancelReset">やめる</button>
+      <button class="btn danger" id="doReset">リセット</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const KEY = 'kuji-counter-v1';
+  const $ = id => document.getElementById(id);
+  const defaults = { initPrize: 30, initTotal: 100, prize: 30, total: 100, streak: 0, history: [] };
+
+  let s;
+  try { s = Object.assign({}, defaults, JSON.parse(localStorage.getItem(KEY) || '{}')); }
+  catch (e) { s = Object.assign({}, defaults); }
+
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} };
+  const snap = () => ({ prize: s.prize, total: s.total, streak: s.streak });
+  const push = () => { s.history.push(snap()); if (s.history.length > 500) s.history.shift(); };
+  const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
+
+  function render() {
+    $('prize').textContent = s.prize;
+    $('total').textContent = s.total;
+    const pct = s.total > 0 ? (s.prize / s.total * 100) : 0;
+    $('pct').innerHTML = (s.total > 0 ? pct.toFixed(1) : '—') + '<small>%</small>';
+    $('streak').textContent = s.streak;
+    $('streakBox').classList.toggle('hot', s.streak >= 10);
+    $('btnHit').disabled = !(s.prize > 0 && s.total > 0);
+    $('btnNc').disabled = !(s.total > s.prize);
+    $('btnUndo').disabled = s.history.length === 0;
+  }
+  function flash(id) { const el = $(id); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+
+  $('btnHit').addEventListener('click', () => {
+    if (!(s.prize > 0 && s.total > 0)) return;
+    push(); s.prize--; s.total--; s.streak = 0;
+    save(); render(); flash('prize'); buzz([30, 40, 30]);
+  });
+  $('btnNc').addEventListener('click', () => {
+    if (!(s.total > s.prize)) return;
+    push(); s.total--; s.streak++;
+    save(); render(); buzz(15);
+  });
+  $('btnUndo').addEventListener('click', () => {
+    const prev = s.history.pop(); if (!prev) return;
+    Object.assign(s, prev); save(); render(); buzz(10);
+  });
+
+  // リセット
+  $('btnReset').addEventListener('click', () => {
+    $('resetText').textContent = `豪華景品 ${s.initPrize} ／ 総数 ${s.initTotal} の開始状態に戻します。履歴も消えます。`;
+    $('resetModal').classList.add('open');
+  });
+  $('cancelReset').addEventListener('click', () => $('resetModal').classList.remove('open'));
+  $('doReset').addEventListener('click', () => {
+    s.prize = s.initPrize; s.total = s.initTotal; s.streak = 0; s.history = [];
+    save(); render(); $('resetModal').classList.remove('open');
+  });
+
+  // 設定
+  $('openSettings').addEventListener('click', () => {
+    $('inPrize').value = s.initPrize; $('inTotal').value = s.initTotal; $('err').textContent = '';
+    $('settingsModal').classList.add('open');
+  });
+  $('cancelSettings').addEventListener('click', () => $('settingsModal').classList.remove('open'));
+  document.querySelectorAll('.stepper button').forEach(b => b.addEventListener('click', () => {
+    const inp = $(b.dataset.t); const v = (parseInt(inp.value, 10) || 0) + parseInt(b.dataset.d, 10);
+    inp.value = Math.max(0, v);
+  }));
+  $('saveSettings').addEventListener('click', () => {
+    const p = parseInt($('inPrize').value, 10), t = parseInt($('inTotal').value, 10);
+    if (!Number.isFinite(p) || !Number.isFinite(t) || p < 0 || t < 1) { $('err').textContent = '0以上の数を入れてください（総数は1以上）'; return; }
+    if (p > t) { $('err').textContent = '豪華景品の数が総数を超えています'; return; }
+    s.initPrize = p; s.initTotal = t; s.prize = p; s.total = t; s.streak = 0; s.history = [];
+    save(); render(); $('settingsModal').classList.remove('open');
+  });
+  document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
+
+  // 画面を消さない（対応端末のみ）
+  let lock = null;
+  async function keepAwake() {
+    try { if ('wakeLock' in navigator && document.visibilityState === 'visible') lock = await navigator.wakeLock.request('screen'); } catch (e) {}
+  }
+  document.addEventListener('visibilitychange', keepAwake);
+  document.addEventListener('click', () => { if (!lock || lock.released) keepAwake(); });
+  keepAwake();
+
+  // ダブルタップでの拡大を防ぐ（iOS）
+  let last = 0;
+  document.addEventListener('touchend', e => {
+    const now = Date.now();
+    if (now - last < 350 && !e.target.closest('input')) e.preventDefault();
+    last = now;
+  }, { passive: false });
+
+  // オフライン用キャッシュ
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
